@@ -1,4 +1,7 @@
 import warnings
+import numpy as np
+from scipy.optimize import approx_fprime
+
 def optimize(start, fun, max_iter=10000, tol=1e-7):
     """
     Run Newton method to minimise a function.
@@ -53,3 +56,37 @@ def optimize(start, fun, max_iter=10000, tol=1e-7):
             raise RuntimeError(f"At iteration {i}, optimization appears to be diverging")
 
     return {'x':x,'value':fun(x)}
+
+def numerical_hessian(fun, x, epsilon=1e-5):
+	n = x.size
+	hess = np.zeros((n, n))
+	fx = fun(x)
+	for i in range(n):
+		x_i1 = np.array(x, dtype=float)
+		x_i1[i] += epsilon
+		grad1 = approx_fprime(x_i1, fun, epsilon)
+		x_i2 = np.array(x, dtype=float)
+		x_i2[i] -= epsilon
+		grad2 = approx_fprime(x_i2, fun, epsilon)
+		hess[:, i] = (grad1 - grad2) / (2 * epsilon)
+	return hess
+
+def multi_optimize(start, fun, max_iter=10000, tol=1e-7):
+	x = start
+	iter = 0
+	while iter < max_iter:
+		grad = approx_fprime(x, fun, 1e-8)
+		hess = numerical_hessian(fun, x)
+		try:
+			step = np.linalg.solve(hess, grad)
+		except np.linalg.LinAlgError:
+			print("Hessian is not invertible.")
+			break
+		x_new = x - step
+		if np.linalg.norm(x_new - x) < tol:
+			print(f"Converged after {iter+1} iterations.")
+			x = x_new
+			break
+		x = x_new
+		iter += 1
+	return {"Minimum": x, "Function Value": fun(x), "Iterations": iter}
