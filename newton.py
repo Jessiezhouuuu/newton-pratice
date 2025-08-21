@@ -1,3 +1,4 @@
+import warnings
 def optimize(start, fun, max_iter=10000, tol=1e-7):
     """
     Run Newton method to minimise a function.
@@ -21,6 +22,11 @@ def optimize(start, fun, max_iter=10000, tol=1e-7):
     x :
         minimizer found by Newton method
     """
+    if not callable(fun):
+       raise TypeError(f"Argument is not a function, it is of type {type(fun)}")
+
+    # if x > 3:
+    #    warnings.warn(f"{x} is greater than 3.", UserWarning)
 
     ## calculate derivative
     def first_derivative(x, fun, h=1e-5):
@@ -34,9 +40,16 @@ def optimize(start, fun, max_iter=10000, tol=1e-7):
     for i in range(max_iter):
         f_prime = first_derivative(x, fun)
         f_second_prime = second_derivate(x, fun)
-        new_x = x - f_prime / f_second_prime
+        try:
+            new_x = x - f_prime / f_second_prime
+        except ZeroDivisionError:
+            print('The second derivative equals to zero!')
+            return 
         change = abs(x - new_x)
         if change < tol:
             break
         x = new_x
-    return x
+        if x > 1e7:
+            raise RuntimeError(f"At iteration {i}, optimization appears to be diverging")
+
+    return {'x':x,'value':fun(x)}
